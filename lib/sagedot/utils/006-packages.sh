@@ -17,6 +17,9 @@ packages_filter() {
     # 3: @any:package > package
     # 5: #lines > removed
     while read -r line || [ -n "${line}" ]; do
+        if [ -z "${line}" ]; then
+            continue
+        fi
         echo "${line}" |
             sed -n '/^[^@].*$/p; /^@!.*:.*$/p; /^@'"${_distro}"':.*$/p; /^@'"${_pmg}"':.*$/p' |
             sed '/^@!'"${_distro}"':.*$/d; /^@!'"${_pmg}"':.*$/d' |
@@ -34,6 +37,9 @@ packages_filter() {
 #   Filtered list of not installed packages
 packages_filter_installed() {
     while read -r line || [ -n "${line}" ]; do
+        if [ -z "${line}" ]; then
+            continue
+        fi
         if ! is_installed "${line}"; then
             echo "${line}"
         fi
@@ -52,6 +58,9 @@ packages_filter_installed() {
 #   Inserts all packages into the databse
 packages_mark() {
     while read -r line || [ -n "${line}" ]; do
+        if [ -z "${line}" ]; then
+            continue
+        fi
         local sql
         local _res
         sql="SELECT (name) FROM packages WHERE profile = ${SAGEDOT_CURRENT_PROFILE} AND name = '${line}'"

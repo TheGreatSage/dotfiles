@@ -11,7 +11,7 @@ This is a repository to backup and install all of Sage's dotfiles. Using a custo
 ## Install
 1. Download
 ```sh
-git clone https://github.com/TheGreatSage/dotfiles
+git clone https://github.com/TheGreatSage/dotfiles.git
 cd dotfiles
 ```
 2. Install

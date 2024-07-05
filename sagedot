@@ -1,0 +1,232 @@
+#!/usr/bin/env sh
+
+set -ue
+
+# SAGEDOT_REALPATH
+# This is the actual path to the `sagedot` script
+SAGEDOT_REALPATH="$(realpath "$0")"
+readonly SAGEDOT_REALPATH
+
+# SAGEDOT_VERSION
+# The current version of `sagedot`
+readonly SAGEDOT_VERSION="1.0.0"
+
+# SAGEDOT_HOME
+# This is the directory of the `sagedot` script
+SAGEDOT_HOME="$(dirname "${SAGEDOT_REALPATH}")"
+
+# SAGEDOT_FILE
+# The database file to use
+# Defaults to $SAGEDOT_HOME/sagedot.db
+# This is used in setup and the database scripts
+# shellcheck disable=SC2034
+SAGEDOT_FILE=${SAGEDOT_FILE:="${SAGEDOT_HOME}/sagedot.db"}
+
+# SAGEDOT_RUNTIME
+# The start time of `sagedot` in iso-8601 format
+# Used for database date checking
+SAGEDOT_RUNTIME="$(date -Iseconds)"
+# shellcheck disable=SC2034
+readonly SAGEDOT_RUNTIME
+
+# SAGEDOT_RUNTIME_FOLDER
+# A folder safe version of the `sagedot` start date
+# For use in backups.
+SAGEDOT_RUNTIME_FOLDER="$(date +"%Y-%m-%dT%H%M%S")"
+# shellcheck disable=SC2034
+readonly SAGEDOT_RUNTIME_FOLDER
+
+# SAGEDOT_LOG_FOLDER
+# The folder to store logs.
+# WARNING: sagedot_log_clean will remove excess logs in this folder
+SAGEDOT_LOG_FOLDER=${SAGEDOT_LOG_FOLDER:=${SAGEDOT_HOME}/lib/sagedot/logs}
+# SAGEDOT_LOG_FILE
+# The file to write logs into this run
+SAGEDOT_LOG_FILE=${SAGEDOT_LOG_FILE:=${SAGEDOT_LOG_FOLDER}/$(date +"%Y-%m-%dT%H%M%S").log}
+# SAGEDOT_LOG_LEVEL
+# The default log level
+SAGEDOT_LOG_LEVEL=${SAGEDOT_LOG_LEVEL:="info"}
+# SAGEDOT_LOG_FMT
+# The format of the date command for logging
+SAGEDOT_LOG_FMT=${SAGEDOT_LOG_FMT:="%Y-%m-%dT%H%M%S"}
+# SAGEDOT_LOG_MAX
+# The number of log files to keep, default 8
+SAGEDOT_LOG_MAX=${SAGEDOT_LOG_MAX:=8}
+
+# SAGEDOT_TMP_FOLDER
+# See my notes on mktemp, I'm not sure how portable it is
+# But several loops with `find`, make use of creating tmp files
+SAGEDOT_TMP_FOLDER="$(mktemp -d "${TMPDIR:-/tmp}"/sagedot.XXXXXXXX)"
+readonly SAGEDOT_TMP_FOLDER
+
+#######################################
+# Create a tmp file to be used within the sagedot runtime
+#
+# Outputs:
+# 	Shows the usage of different commands
+sagedot_tmp() {
+    mktemp -p "${SAGEDOT_TMP_FOLDER}"
+}
+
+# I don't really understand trap, but it seems to work.
+trap 'rm -rf "$SAGEDOT_TMP_FOLDER"; trap - EXIT; exit' EXIT INT HUP TERM
+
+#######################################
+# Shows the usage of sagedot
+#
+# Arguments:
+#   $1: [command] optional, defaults to commands
+# Outputs:
+# 	Shows the usage of different commands
+show_usage() {
+    if [ "$#" -gt 0 ]; then
+        case $1 in
+        commands | command)
+            print_default "USAGE: sagedot [OPTIONS] -i|--install|install profile [profile...]"
+            print_default "USAGE: sagedot [OPTIONS] -h|--help|help"
+            print_default "USAGE: sagedot [OPTIONS] -c|--commands|commands"
+            print_default "USAGE: sagedot [OPTIONS] --version|version"
+            print_default "OPTIONS:"
+            print_default "   -v | verbose) Increase the log level to the highest"
+            print_default "   -d | debug) Run in debug mode (for development)"
+            ;;
+        install)
+            print_default "USAGE: sagedot OPTIONS [install|-i|--install] profile"
+            print_default "OPTIONS:"
+            print_default "   -v | verbose) Increase the log level to the highest"
+            print_default "   -d | debug) Run in debug mode (for development)"
+            print_default "PROFILE:"
+            print_default "   A profile name must be alpha numeric, dashs, and underscores only."
+            ;;
+        esac
+    else
+        show_usage commands
+        return
+    fi
+    print_default ""
+}
+
+#######################################
+# Loads the sagedot library utils
+#
+# Globals:
+#   SAGEDOT_HOME
+load_sagedot() {
+    for UTIL in "${SAGEDOT_HOME}"/lib/sagedot/utils/???-*.sh; do
+        # shellcheck source=/dev/null
+        . "${UTIL}"
+        # Cheating by doing this second
+        log_trace "[sagedot] Util: ${UTIL}"
+    done
+}
+
+#######################################
+# Checks if sagedot is being ran with root
+#
+# Outputs:
+#   Exits if user is root
+root_sagedot() {
+    # shellcheck disable=SC2312
+    if [ "$(id -u)" = 0 ]; then
+        print_error "sagedot does not support running as root."
+        print_error "sagedot is not a full setup utility."
+        exit 1
+    fi
+}
+
+#######################################
+# Runs the sagedot setup scripts
+#
+# Globals:
+#   SAGEDOT_HOME
+# Outputs:
+#   Does anything defined in $SAGEDOT_HOME/lib/sagedot/setup/###-.sh
+setup_sagedot() {
+    for SETUP in "${SAGEDOT_HOME}"/lib/sagedot/setup/???-*.sh; do
+        log_trace "[sagedot] Setup: ${SETUP}"
+        # shellcheck source=/dev/null
+        . "${SETUP}"
+    done
+}
+
+#######################################
+# Main entry point for sagedot
+# Parses arguments before running sagedot
+#
+# Outputs:
+#   Shows help or runs specified command
+main() {
+    root_sagedot
+
+    local _help=false
+    local _install=false
+    local _version=false
+    if [ "$#" = 0 ]; then
+        _help=true
+    fi
+    while [ "$#" -gt 0 ]; do
+        case ${1} in
+        --commands | -c | commands)
+            _help=true
+            break
+            ;;
+        --help | -h | help)
+            _help=true
+            break
+            ;;
+        --debug | -d | debug)
+            set -uex
+            ;;
+        --version | version)
+            _version=true
+            break
+            ;;
+        -v | verbose)
+            SAGEDOT_LOG_LEVEL="trace"
+            ;;
+        --install | -i | install)
+            # shift so -i is not still in $@
+            shift
+            _install=true
+            break
+            ;;
+        *)
+            _help=true
+            break
+            ;;
+        esac
+        shift
+    done
+
+    load_sagedot
+
+    if [ "${_version}" = true ]; then
+        print_debug "${SAGEDOT_VERSION}"
+        return 0
+    fi
+
+    if [ "${_help}" = true ]; then
+        show_usage
+        return 0
+    fi
+
+    if [ "${_install}" = true ]; then
+        if [ $# -lt 1 ]; then
+            print_error "Error: Not enough arguments"
+            show_usage install
+            exit 1
+        fi
+        setup_sagedot
+
+        while [ "$#" -gt 0 ]; do
+            check_profile_name "${1}"
+            sagedot_install "$@"
+            shift
+        done
+        return 0
+    fi
+
+    show_usage
+}
+
+main "$@"

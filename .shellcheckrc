@@ -1,0 +1,33 @@
+# Set to ash as Alpine is the most restrictive shell I use
+shell=ash
+
+# I enable this because I think it is needed to include
+# the lib folder
+external-sources=true
+# I don't think this is used but I included it anyways
+# I source most files using a glob so they are unknown
+source-path=./lib
+
+# SC3043: In POSIX sh, 'local' is undefined
+# https://www.shellcheck.net/wiki/SC3043
+disable=3043
+
+# Suggest putting braces around all variable references
+# For consitant code style 
+enable=require-variable-braces
+
+# Suggest quoting variables without metacharacters
+# For consitant code style
+enable=quote-safe-variables
+
+# Suggest 'command -v' instead of 'which'
+enable=deprecate-which
+
+# Notify when set -e is suppressed during function invocation
+enable=check-set-e-suppressed
+
+# Check for additional cases where exit codes are masked
+enable=check-extra-masked-returns
+
+# Suggest explicitly using -n in `[ $var ]`
+enable=avoid-nullary-conditions

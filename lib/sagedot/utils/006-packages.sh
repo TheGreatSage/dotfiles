@@ -97,13 +97,15 @@ packages_list() {
     local _needs
     find -L "${dir}" -name "*.list" ! -name . ! -name "$(printf "*\n*")" -prune -type f >"${_pkg_loop}"
     while IFS= read -r file; do
-        print_info "Found package list: ${file}"
+        print_debug "Found package list: ${file}"
         _needs="$(packages_filter <"${file}" | packages_filter_installed)"
         local _pkgs
-        _pkgs="$(echo "${_needs}" | tr '\n' ' ')"
+        _pkgs="$(echo "${_needs}" | tr '\n' ' ' | sed 's/^[ \t]*//')"
         if [ -n "${_pkgs}" ]; then
             check_install "${_pkgs}"
             echo "${_needs}" | packages_mark
+        else
+            print_debug "All packages installed: ${file}"
         fi
     done <"${_pkg_loop}"
 }

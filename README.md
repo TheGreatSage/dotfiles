@@ -70,7 +70,7 @@ It requires a `sudo/doas` capable user to install necessary packages, and packag
 `sqlite` is required for [sagedot](#sagedot) to remember state. It is installed when you install a profile for the first time.
 
 ## Warnings
-This project is mostly for personal use so it's not considered **battle-hardened** or **production ready**. I'll try not to push breaking changes but I have no plans to implement database migrations so any change to the database is probably a **breaking change**.
+This project is mostly for personal use so it's not considered **battle-hardened** or **production ready**. I'll try not to push breaking changes but every now and then it will probably be easier to start from a fresh database, my migrations are very simple.
 
 When installing a profile [sagedot](#sagedot) installs the `sqlite` package. It also creates a file `sagedot.sb` in the root of the install folder see the [database](#database) section on why that is.
 
@@ -137,16 +137,17 @@ I could have made [sagedot](#sagedot) support the root user and install base pac
 The [sagedot](#sagedot) library lives in the `./lib/sagedot` folder. With the frontend `sagedot` file that is the main entry point.
 ```
 ~/dotfiles
-├─┬─ lib        # I nest sagedot inside the lib folder, just because.
-│ └─┬─ sagedot  # Everything sagedot related lives here
-│   ├─── alpine # Alpine specic setup scripts
-│   ├─── logs   # The logs folder gets created after being ran
-│   ├─── setup  # Anything that has an actual effect goes here, e.g initilization
-│   └─── utils  # The main library of sagedot lives here
-├── profile     # A profile folder lives on the main level
-├── profile2... # Any other profile folders live here too
-├── sagedot     # The sagedot entry script
-└── sagedot.db  # The database sagedot creates
+├─┬─ lib             # I nest sagedot inside the lib folder, just because.
+│ └─┬─ sagedot       # Everything sagedot related lives here
+│   ├─── alpine      # Alpine specic setup scripts
+│   ├─── logs        # The logs folder gets created after being ran
+│   ├─── migrations  # Migration files for database. 
+│   ├─── setup       # Anything that has an actual effect goes here, e.g initilization
+│   └─── utils       # The main library of sagedot lives here
+├── profile          # A profile folder lives on the main level
+├── profile2...      # Any other profile folders live here too
+├── sagedot          # The sagedot entry script
+└── sagedot.db       # The database sagedot creates
 ```
 The [sagedot](#sagedot) library gets sourced in the `sagedot` file using globbing. Which is why I use the `###-*.sh` file scheme so they get loaded in a predictable mannger.
 
@@ -155,8 +156,9 @@ The order a [sagedot](#sagedot) runs is simple:
 
 1. `sagedot` Parses the passed arguments
 1. `lib/sagedot/utils/` Is loaded in order.
-1. `lib/sagedot/setup/` This folder and the following are only loaded when an install takes place.
+1. `lib/sagedot/setup/` This folder and the two following are only loaded when an install takes place.
 1. `lib/sagedot/alpine/` gets loaded after `001-distro.sh` from setup if on alpine. Note: this can be destructive. See [alpine notes](#alpine-notes).
+1. `lib/sagedot/migrations` This folder is loaded during `010-initialize.sh` for getting the database file set up.
 1. `profile/*.list` files are processed and packages are installed.
 2. `profile/scripts/before/` scripts are checked and ran based on type.
 3. `profile/configs/` config files are copied over.
@@ -235,6 +237,7 @@ Why does [sagedot](#sagedot) require `sqlite`? Why use a database at all?
 The answer to those questions is mostly, because I wanted to. I wanted to store some state and didn't want to handle parsing a file so thought it would be fun to include sqlite and call it from my scripts (It was).
 
 What does it do?
+- Tracking the last version of [sagedot](#sagedot) installed.
 - Tracking what profiles have been installed. (Not very well)
 - Tracking what packages get install per profile.
 - Tracking what files have been backed up.
@@ -267,6 +270,7 @@ Things that I would like to add at some point but are not required by the [desig
 - Standardize all variable names
 - Clean up code style to be even more consistent
 - Make log/output messages more consistent
+- Better migration support. The current version does a basic check and thats it.
 
 ## Portability
 This has been tested on Alpine, Arch Linux, and Debian virtual machines. Only a Arch Linux has been tested on a physical machine.
@@ -304,9 +308,9 @@ Alpine is the special case beacuse I wanted to make sure I had access to all the
 I coded this on my daily machine that already had the configs in place then tested on a arch VM to make sure it still worked. I personally use the `yay` AUR helper which is why it is included in the package managers. It wouldn't be that hard to add a different one if they work in a similar way.
 
 ### Adding a distro:
-To add support for a distro requires a little bit of editing. The `001-environment.sh` file in the `lib/sagedot/utils/` is where most of the work is done. Specifically: `which_distro`, `which_pmg`, `check_install` and `is_installed` make use of the package manager and distro.
+To add support for a distro requires a little bit of editing. The `002-environment.sh` file in the `lib/sagedot/utils/` is where most of the work is done. Specifically: `which_distro`, `which_pmg`, `check_install` and `is_installed` make use of the package manager and distro.
 
-If the distro requires specific setup like [alpine](#alpine-notes) then just copy how **alpine** does it. Create a folder with the setup needed, and load it from `001-distro.sh`.
+If the distro requires specific setup like [alpine](#alpine-notes) then just copy how **alpine** does it. Create a folder with the setup needed, and load it from `setup/001-distro.sh`.
 
 If your distro does not use `systmctl` or `rc-service/rc-update` and you wish to make use of the `service_*` functions then you will have to change the `service_manager` function in `011-service.sh`.
 

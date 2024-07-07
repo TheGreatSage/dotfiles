@@ -13,67 +13,6 @@ verify_sqlite() {
 }
 
 #######################################
-# Create the needed tables for a sagedot file
-#
-# Globals:
-#   SAGEDOT_FILE
-sqlite_sagedot() {
-    local sql="
-    CREATE TABLE IF NOT EXISTS profiles (
-        id INTEGER PRIMARY KEY,
-        profile TEXT UNIQUE NOT NULL,
-        installed_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS backups (
-        id INTEGER PRIMARY KEY,
-        profile INTEGER NOT NULL,
-        date TEXT UNIQUE NOT NULL,
-        folder TEXT NOT NULL,
-        FOREIGN KEY (profile) REFERENCES profiles(id)
-    );
-    CREATE TABLE IF NOT EXISTS backup_files (
-        id INTEGER PRIMARY KEY,
-        backup INTEGER NOT NULL,
-        file TEXT NOT NULL,
-        name TEXT NOT NULL,
-        hash TEXT NOT NULL,
-        FOREIGN KEY (backup) REFERENCES backups(id)
-    );
-    CREATE TABLE IF NOT EXISTS packages (
-        id INTEGER PRIMARY KEY,
-        profile INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        date TEXT NOT NULL,
-        FOREIGN KEY (profile) REFERENCES profiles(id)
-    );
-    CREATE TABLE IF NOT EXISTS run_once (
-        id INTEGER PRIMARY KEY,
-        profile INTEGER NOT NULL,
-        before INTEGER DEFAULT 1 NOT NULL,
-        folder TEXT NOT NULL,
-        file TEXT NOT NULL,
-        name TEXT NOT NULL,
-        date TEXT NOT NULL,
-        FOREIGN KEY (profile) REFERENCES profiles(id)
-    );
-    CREATE TABLE IF NOT EXISTS run_onchange (
-        id INTEGER PRIMARY KEY,
-        profile INTEGER NOT NULL,
-        before INTEGER DEFAULT 1 NOT NULL,
-        folder TEXT NOT NULL,
-        file TEXT NOT NULL,
-        name TEXT NOT NULL,
-        first_ran TEXT NOT NULL,
-        last_ran TEXT NOT NULL,
-        hash TEXT NOT NULL,
-        FOREIGN KEY (profile) REFERENCES profiles(id)
-    );  
-    "
-    sqlite3 "${SAGEDOT_FILE}" "${sql}"
-}
-
-#######################################
 # Run an sql statment against the sagedot file
 #
 # Arguments:
@@ -92,4 +31,58 @@ sqlite_run() {
         return
     fi
     sqlite3 "${SAGEDOT_FILE}" "${sql}"
+}
+
+#######################################
+# Runs all migrations
+#
+# Globals:
+#   SAGEDOT_HOME
+sqlite_load_migrations() {
+    for MIGRATE in "${SAGEDOT_HOME}"/lib/sagedot/migrations/???-*.sh; do
+        # shellcheck source=/dev/null
+        . "${MIGRATE}"
+        log_trace "[sagedot] Migration: ${MIGRATE}"
+    done
+}
+
+
+#######################################
+# Returns the version number of the sagedot database
+#
+# Outputs
+#   Version Number
+sqlite_get_version() {
+    local sql="
+    SELECT name FROM sqlite_master WHERE type='table' AND name='sagedot';
+    "
+    local _res
+    _res="$(sqlite_run "${sql}")"
+    if [ -z "${_res}" ]; then
+        echo "1.0.0"
+        return
+    fi
+    sql="
+    SELECT (value) FROM sagedot WHERE key = 'version';
+    "
+    _res="$(sqlite_run "${sql}")"
+    if [ -z "${_res}" ]; then
+        log_error "Could not get sagedot version!"
+        exit 1
+    fi
+    echo "${_res}"
+}
+
+#######################################
+# Migrate the databse to the current version
+#
+# Globals:
+#   SAGEDOT_FILE
+sqlite_sagedot() {
+    if [ ! -f "${SAGEDOT_FILE}" ]; then
+        touch "${SAGEDOT_FILE}"
+    fi
+    print_debug "Loading sagedot migrations."
+    sqlite_load_migrations
+    log_debug "Finshed sagedot migrations."
 }

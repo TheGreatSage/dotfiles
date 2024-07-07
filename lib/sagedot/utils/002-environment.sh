@@ -100,6 +100,9 @@ check_install() {
     local distro
     distro=$(which_distro)
     local pkgs="$*"
+    if [ -z "${pkgs}" ]; then
+        return
+    fi
     local _sudo
     _sudo=$(which_sudo)
     print_info "Installing: ${pkgs}"

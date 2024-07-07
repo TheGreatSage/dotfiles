@@ -12,10 +12,7 @@ initialize() {
         check_install "@!debian:sqlite" "@debian:sqlite3"
     fi
 
-    if [ ! -f "${SAGEDOT_FILE}" ]; then
-        touch "${SAGEDOT_FILE}"
-        sqlite_sagedot
-    fi
+    sqlite_sagedot
 }
 
 initialize

@@ -264,7 +264,7 @@ rust_version () {
 go_version () {
   if [ -f ./go.mod ]; then
     local name=$(cat go.mod | grep "module " -m1 | sed -r 's/module |"|,|\ |\/v[0-9]*//g')
-    local version=$(cat go.mod | grep "module " -m1 | sed -r 's/module |"|,|\ |\/v[0-9]*//g' | grep "v[0-9]*" -o -m1)
+    local version=$(cat go.mod | grep "module " -m1 | grep "v[0-9]*" -o -m1)
     local at=`wrap_color $SAGE_THEME_PROJECT_AT_COLOR @ $SAGE_THEME_PROJECT_AT_BOLD`
 
     if [ -z "$version" ]; then

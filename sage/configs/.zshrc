@@ -112,3 +112,6 @@ export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock
 
 # GO
 export PATH="$PATH:$(go env GOBIN):$(go env GOPATH)/bin"
+
+# ProtonUp-Qt
+if [ -d "/home/sage/stl/prefix" ]; then export PATH="$PATH:/home/sage/stl/prefix"; fi

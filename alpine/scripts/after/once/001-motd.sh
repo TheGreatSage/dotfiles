@@ -1,14 +1,8 @@
 change_motd() {
     _sudo=$(which_sudo)
-    # Clears motd
-    ${_sudo} true > /etc/motd
-
-    { 
-        ${_sudo} printf "%s\n\n" "Welcome!"
-        ${_sudo} printf "%s\n" "Default pacakges shoulda been setup."
-        ${_sudo} printf "%s\n\n" "You are good to start setting thigs up."
-        ${_sudo} printf "%s\n" "Don't break stuff to bad!"
-    } >> /etc/motd
+    # Hard code path cause it's easier
+    # TODO: make a current profile variable
+    ${_sudo} mv "${SAGEDOT_HOME}"/alpine/scripts/after/once/motd /etc/motd
 }
 
 change_motd

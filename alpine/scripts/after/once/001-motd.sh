@@ -10,3 +10,5 @@ change_motd() {
         ${_sudo} printf "%s\n" "Don't break stuff to bad!"
     } >> /etc/motd
 }
+
+change_motd

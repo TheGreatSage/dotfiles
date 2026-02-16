@@ -271,6 +271,7 @@ Things that I would like to add at some point but are not required by the [desig
 - Clean up code style to be even more consistent
 - Make log/output messages more consistent
 - Better migration support. The current version does a basic check and thats it.
+- Drop oh-my-zsh
 
 ## Portability
 This has been tested on Alpine, Arch Linux, and Debian virtual machines. Only a Arch Linux has been tested on a physical machine.

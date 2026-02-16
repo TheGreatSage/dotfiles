@@ -4,6 +4,4 @@ zsh
 git
 kitty-terminfo
 nano
-@arch:ttf-jetbrains-mono-nerd
-@arch:ttf-mplus-nerd
 @alpine:bind-tools

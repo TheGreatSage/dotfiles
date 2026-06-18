@@ -13,7 +13,7 @@ from kitty.tab_bar import (
 )
 
 opts = get_options()
-icon_fg = as_rgb(color_as_int(opts.color16))
+icon_fg = as_rgb(color_as_int(opts.color5))
 icon_bg = as_rgb(color_as_int(opts.color8))
 clock_color = as_rgb(color_as_int(opts.color15))
 date_color = as_rgb(color_as_int(opts.color8))

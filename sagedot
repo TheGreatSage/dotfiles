@@ -59,6 +59,13 @@ SAGEDOT_LOG_MAX=${SAGEDOT_LOG_MAX:=8}
 SAGEDOT_TMP_FOLDER="$(mktemp -d "${TMPDIR:-/tmp}"/sagedot.XXXXXXXX)"
 readonly SAGEDOT_TMP_FOLDER
 
+# SAGEDOT_BACKUPS_ENABLED
+# This disables backups
+# 0 is Disabled
+# Default is enabled
+SAGEDOT_BACKUPS_ENABLED=${SAGEDOT_BACKUPS_ENABLED:=1}
+
+
 #######################################
 # Create a tmp file to be used within the sagedot runtime
 #
@@ -89,12 +96,14 @@ show_usage() {
             print_default "OPTIONS:"
             print_default "   -v | verbose) Increase the log level to the highest"
             print_default "   -d | debug) Run in debug mode (for development)"
+            print_default "   -b | no-backups) Disables backups"
             ;;
         install)
             print_default "USAGE: sagedot OPTIONS [install|-i|--install] profile"
             print_default "OPTIONS:"
             print_default "   -v | verbose) Increase the log level to the highest"
             print_default "   -d | debug) Run in debug mode (for development)"
+            print_default "   -b | no-backups) Disables backups"
             print_default "PROFILE:"
             print_default "   A profile name must be alpha numeric, dashs, and underscores only."
             ;;
@@ -161,6 +170,8 @@ main() {
     local _help=false
     local _install=false
     local _version=false
+    local _sage=false # TODO: Change how the options are read to better do this
+    local _backups=true
     if [ "$#" = 0 ]; then
         _help=true
     fi
@@ -190,6 +201,18 @@ main() {
             _install=true
             break
             ;;
+        --sage | -sage | -is | sage)
+            _sage=true
+            break;
+            ;;
+        --no-backups | --backups | -b | no-backups)
+            _backups=false
+            ;;
+        -q | test)
+            _sage=true
+            _backups=false
+            break;
+            ;;
         *)
             _help=true
             break
@@ -197,6 +220,10 @@ main() {
         esac
         shift
     done
+
+    if [ "${_backups}" = false ]; then
+        SAGEDOT_BACKUPS_ENABLED=0
+    fi
 
     load_sagedot
 
@@ -207,6 +234,19 @@ main() {
 
     if [ "${_help}" = true ]; then
         show_usage
+        return 0
+    fi
+
+    if [ "${_backups}" = false ]; then
+        print_debug "Not backing up files"
+    fi
+
+    if [ "${_sage}" = true ]; then
+        setup_sagedot
+        # TODO: Change this to use a env variable or something
+        check_profile_name "sage"
+        sagedot_install "sage"
+
         return 0
     fi
 

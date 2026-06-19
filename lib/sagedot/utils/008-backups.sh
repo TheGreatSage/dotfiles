@@ -1,5 +1,10 @@
 #!/usr/bin/env sh
 
+# SAGEDOT_BACKUPS_ENABLED
+# This disables backups
+# 0 is Disabled
+SAGEDOT_BACKUPS_ENABLED=${SAGEDOT_BACKUPS_ENABLED:=1}
+
 # SAGEDOT_BACKUP_CREATED
 # Used to track if a backup has been created
 # WARNING: DO NOT SET THIS MANUALLY only set in `backups_create`
@@ -162,3 +167,21 @@ backup_file() {
     print_default "Backed-up: ${file}"
     # log_debug "[backup_file] Backed-up: $file"
 }
+
+if [ "${SAGEDOT_BACKUPS_ENABLED}" -eq 0 ]; then
+    unset -f backups_check
+    unset -f backups_create
+    unset -f backups_file
+
+    backups_check() {
+        return 0;
+    }
+
+    backups_create() {
+        return 0;
+    }
+
+    backups_file() {
+        return 0;
+    }
+fi
